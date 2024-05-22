@@ -201,12 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if speed > 30.00 {
                 match get_ip_location(&ip).await {
                     Ok(location) => {
-                        // println!(
-                        //     "IP: {}, 速度: {:.2} MB/s, Location: {}",
-                        //     ip, speed, location
-                        // );
                         let mut res = res.lock().unwrap();
-                        // res.push(format!("{}:80#{}{:.0}", ip, location, speed));
                         res.push((ip, location, speed));
                     }
                     Err(e) => println!("Failed to get location: {}", e),
