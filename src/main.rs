@@ -12,6 +12,12 @@ use tokio::time::{sleep, Duration};
 async fn download_file(url: &str, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
     if !Path::new(filename).exists() {
         println!("从服务器下载 {}", filename);
+
+        // 创建所有父文件夹
+        if let Some(parent) = Path::new(filename).parent() {
+            std::fs::create_dir_all(&parent)?;
+        }
+
         let client = Client::new();
         let response = client.get(url).send().await?;
         let bytes = response.bytes().await?;
@@ -23,10 +29,19 @@ async fn download_file(url: &str, filename: &str) -> Result<(), Box<dyn std::err
 
 async fn check_and_download_files() -> Result<(), Box<dyn std::error::Error>> {
     let urls = [
-        ("https://www.baipiao.eu.org/cloudflare/colo", "colo.txt"),
-        ("https://www.baipiao.eu.org/cloudflare/url", "url.txt"),
-        ("https://www.baipiao.eu.org/cloudflare/ips-v4", "ips-v4.txt"),
-        ("https://www.baipiao.eu.org/cloudflare/ips-v6", "ips-v6.txt"),
+        (
+            "https://www.baipiao.eu.org/cloudflare/colo",
+            "asset/colo.txt",
+        ),
+        ("https://www.baipiao.eu.org/cloudflare/url", "asset/url.txt"),
+        (
+            "https://www.baipiao.eu.org/cloudflare/ips-v4",
+            "asset/ips-v4.txt",
+        ),
+        (
+            "https://www.baipiao.eu.org/cloudflare/ips-v6",
+            "asset/ips-v6.txt",
+        ),
     ];
 
     for (url, filename) in &urls {
@@ -46,7 +61,7 @@ async fn check_and_download_files() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn process_url_file() -> io::Result<(String, String)> {
-    let path = "url.txt";
+    let path = "asset/url.txt";
     if let Ok(lines) = read_lines(path) {
         if let Some(Ok(line)) = lines.into_iter().next() {
             let parts: Vec<&str> = line.split('/').collect();
@@ -62,7 +77,7 @@ fn process_url_file() -> io::Result<(String, String)> {
 }
 
 fn process_ips_file() -> io::Result<Vec<String>> {
-    let path = "ips-v4.txt";
+    let path = "asset/ips-v4.txt";
     let mut ips = Vec::new();
     if let Ok(lines) = read_lines(path) {
         for line in lines {
@@ -134,11 +149,23 @@ async fn get_ip_location(ip: &str) -> Result<String, Error> {
             Ok(location["countryCode"].to_string())
         }
         Err(_) => {
-            // 使用备用服务
+            // 使用第一个备用服务
             let backup_request_url = format!("http://ipinfo.io/{}/json", ip);
-            let backup_response = reqwest::get(&backup_request_url).await?;
-            let location: serde_json::Value = backup_response.json().await?;
-            Ok(location["country"].to_string())
+            let backup_response = reqwest::get(&backup_request_url).await;
+
+            match backup_response {
+                Ok(resp) => {
+                    let location: serde_json::Value = resp.json().await?;
+                    Ok(location["country"].to_string())
+                }
+                Err(_) => {
+                    // 使用第二个备用服务
+                    let second_backup_request_url = format!("https://freegeoip.app/json/{}", ip);
+                    let second_backup_response = reqwest::get(&second_backup_request_url).await?;
+                    let location: serde_json::Value = second_backup_response.json().await?;
+                    Ok(location["country_code"].to_string())
+                }
+            }
         }
     }
 }
@@ -188,13 +215,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     });
     futures::stream::iter(tasks)
-        .for_each_concurrent(100, |task| async {
+        .for_each_concurrent(200, |task| async {
             task.await.unwrap();
         })
         .await;
 
     let mut res = Arc::try_unwrap(res).unwrap().into_inner().unwrap();
-    res.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
+    res.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
 
     let res: Vec<String> = res
         .iter()
