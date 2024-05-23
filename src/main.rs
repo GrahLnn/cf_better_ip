@@ -109,14 +109,15 @@ async fn measure_latency(domain: &str, ip: &str) -> Result<f64, Box<dyn std::err
         .build()?;
 
     let mut total_duration = 0.0;
-    for _ in 0..3 {
+    for _ in 0..10 {
         let start = Instant::now();
         let resp = client.get(&url).send().await?;
         resp.text().await?;
         let duration = start.elapsed().as_millis() as f64; // 转换为毫秒
         total_duration += duration;
+        sleep(Duration::from_secs(2)).await;
     }
-    let avg_duration = total_duration / 3.0;
+    let avg_duration = total_duration / 5.0;
     Ok((avg_duration * 100.0).round() / 100.0) // 保留两位小数
 }
 
@@ -189,7 +190,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         res.len()
     );
     res.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    res.truncate(10);
+    res.truncate(20);
     println!("最佳IP: {:?} Speed: {:.0}", res[0].0, res[0].1);
     let res: Vec<String> = res
         .iter()
