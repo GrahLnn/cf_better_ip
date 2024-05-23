@@ -1,7 +1,7 @@
 use futures::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use rand::seq::SliceRandom;
-use reqwest::{Client, Error, Proxy};
+use reqwest::{Client, Proxy};
 use std::fs::File;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
@@ -103,7 +103,10 @@ async fn measure_latency(domain: &str, ip: &str) -> Result<f64, Box<dyn std::err
     let url = format!("http://{}/cdn-cgi/trace", domain);
     let proxy_url = format!("http://{}:80", ip);
     let proxy = Proxy::http(&proxy_url)?;
-    let client = Client::builder().proxy(proxy).build()?;
+    let client = Client::builder()
+        .proxy(proxy)
+        .timeout(Duration::from_secs(10))
+        .build()?;
 
     let mut total_duration = 0.0;
     for _ in 0..3 {
@@ -120,13 +123,14 @@ async fn measure_latency(domain: &str, ip: &str) -> Result<f64, Box<dyn std::err
 async fn test_speed(ip: &str, domain: &str, file: &str) -> Result<f64, reqwest::Error> {
     let latency = measure_latency(domain, ip).await.unwrap_or(0.0);
 
-    if latency > 1000.0 || latency == 0.0 {
+    if latency > 500.0 || latency == 0.0 {
         return Ok(0.0);
     }
     let proxy = format!("http://{}:80", ip);
     let url = format!("http://{}/{}", domain, file);
     let client = Client::builder()
         .proxy(reqwest::Proxy::http(&proxy)?)
+        .timeout(Duration::from_secs(30))
         .build()?;
 
     let start_time = Instant::now();
@@ -137,37 +141,6 @@ async fn test_speed(ip: &str, domain: &str, file: &str) -> Result<f64, reqwest::
     let speed = (content_length as f64 / (1024.0 * 1024.0)) / duration.as_secs_f64();
 
     Ok(speed)
-}
-
-async fn get_ip_location(ip: &str) -> Result<String, Error> {
-    let request_url = format!("http://ip-api.com/json/{}", ip);
-    let response = reqwest::get(&request_url).await;
-
-    match response {
-        Ok(resp) => {
-            let location: serde_json::Value = resp.json().await?;
-            Ok(location["countryCode"].to_string())
-        }
-        Err(_) => {
-            // 使用第一个备用服务
-            let backup_request_url = format!("http://ipinfo.io/{}/json", ip);
-            let backup_response = reqwest::get(&backup_request_url).await;
-
-            match backup_response {
-                Ok(resp) => {
-                    let location: serde_json::Value = resp.json().await?;
-                    Ok(location["country"].to_string())
-                }
-                Err(_) => {
-                    // 使用第二个备用服务
-                    let second_backup_request_url = format!("https://freegeoip.app/json/{}", ip);
-                    let second_backup_response = reqwest::get(&second_backup_request_url).await?;
-                    let location: serde_json::Value = second_backup_response.json().await?;
-                    Ok(location["country_code"].to_string())
-                }
-            }
-        }
-    }
 }
 
 #[tokio::main]
@@ -198,29 +171,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::spawn(async move {
             let speed = test_speed(&ip, &domain, &*file).await.unwrap_or(0.0);
             pb.inc(1);
-            if speed > 30.00 {
-                match get_ip_location(&ip).await {
-                    Ok(location) => {
-                        let mut res = res.lock().unwrap();
-                        res.push((ip, location, speed));
-                    }
-                    Err(e) => println!("Failed to get location: {}", e),
-                }
+            if speed > 500.00 {
+                let mut res = res.lock().unwrap();
+                res.push((ip, speed));
             }
         })
     });
     futures::stream::iter(tasks)
-        .for_each_concurrent(200, |task| async {
+        .for_each_concurrent(500, |task| async {
             task.await.unwrap();
         })
         .await;
 
     let mut res = Arc::try_unwrap(res).unwrap().into_inner().unwrap();
-    res.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
-
+    println!(
+        "共找到 {} 个速度大于 500MB/s 的 IP，现在根据速度重新排序...",
+        res.len()
+    );
+    res.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    res.truncate(10);
+    println!("最佳IP: {:?} Speed: {:.0}", res[0].0, res[0].1);
     let res: Vec<String> = res
         .iter()
-        .map(|(ip, location, speed)| format!("{}:80#{}{:.0}", ip, location, speed))
+        .map(|(ip, speed)| format!("{}#GLL{:.0}", ip, speed))
         .collect();
     let data = res.join("\n");
     std::fs::write("best_ips.txt", data).expect("Unable to write file");
