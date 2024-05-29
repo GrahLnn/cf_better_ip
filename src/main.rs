@@ -113,12 +113,12 @@ async fn measure_latency(domain: &str, ip: &str) -> Result<f64, Box<dyn std::err
         let start = Instant::now();
         let resp = client.get(&url).send().await?;
         resp.text().await?;
-        let duration = start.elapsed().as_millis() as f64; // 转换为毫秒
+        let duration = start.elapsed().as_millis() as f64;
         total_duration += duration;
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(10)).await; // 间隔测试时间
     }
     let avg_duration = total_duration / 5.0;
-    Ok((avg_duration * 100.0).round() / 100.0) // 保留两位小数
+    Ok((avg_duration * 100.0).round() / 100.0)
 }
 
 async fn test_speed(ip: &str, domain: &str, file: &str) -> Result<f64, reqwest::Error> {
@@ -185,6 +185,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await;
 
     let mut res = Arc::try_unwrap(res).unwrap().into_inner().unwrap();
+    if res.len() == 0 {
+        println!("没有找到速度大于 500MB/s 的 IP");
+        return Ok(());
+    }
     println!(
         "共找到 {} 个速度大于 500MB/s 的 IP，现在根据速度重新排序...",
         res.len()
@@ -194,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("最佳IP: {:?} Speed: {:.0}", res[0].0, res[0].1);
     let res: Vec<String> = res
         .iter()
-        .map(|(ip, speed)| format!("{}#GLL{:.0}", ip, speed))
+        .map(|(ip, speed)| format!("{}#BCFGL{:.0}", ip, speed))
         .collect();
     let data = res.join("\n");
     std::fs::write("best_ips.txt", data).expect("Unable to write file");
