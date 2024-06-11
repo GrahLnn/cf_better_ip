@@ -115,7 +115,7 @@ async fn measure_latency(domain: &str, ip: &str) -> Result<f64, Box<dyn std::err
         resp.text().await?;
         let duration = start.elapsed().as_millis() as f64;
         total_duration += duration;
-        sleep(Duration::from_secs(10)).await; // 间隔测试时间
+        sleep(Duration::from_secs(2)).await; // 间隔测试时间
     }
     let avg_duration = total_duration / 5.0;
     Ok((avg_duration * 100.0).round() / 100.0)
