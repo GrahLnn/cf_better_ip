@@ -107,17 +107,17 @@ async fn measure_latency(domain: &str, ip: &str) -> Result<f64, Box<dyn std::err
         .proxy(proxy)
         .timeout(Duration::from_secs(10))
         .build()?;
-
+    let total = 5;
     let mut total_duration = 0.0;
-    for _ in 0..10 {
+    for _ in 0..total {
         let start = Instant::now();
         let resp = client.get(&url).send().await?;
         resp.text().await?;
         let duration = start.elapsed().as_millis() as f64;
         total_duration += duration;
-        sleep(Duration::from_secs(2)).await; // 间隔测试时间
+        // sleep(Duration::from_secs(2)).await; // 间隔测试时间
     }
-    let avg_duration = total_duration / 5.0;
+    let avg_duration = total_duration / total as f64;
     Ok((avg_duration * 100.0).round() / 100.0)
 }
 
