@@ -159,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .template(
                 "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
             )?
-            .progress_chars("#>-"),
+            .progress_chars("█>-"),
     );
 
     let file = Arc::new(file);
@@ -202,5 +202,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let data = res.join("\n");
     std::fs::write("best_ips.txt", data).expect("Unable to write file");
+    // std::fs::remove_dir_all("asset").expect("Unable to remove asset folder");
     Ok(())
 }
