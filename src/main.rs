@@ -159,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .template(
                 "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
             )?
-            .progress_chars("█>-"),
+            .progress_chars("█>>"),
     );
 
     let file = Arc::new(file);
