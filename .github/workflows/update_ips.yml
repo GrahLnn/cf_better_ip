@@ -25,12 +25,15 @@ jobs:
       - name: Run update_ips.py
         run: python update_ips.py
 
-      - name: Commit and push changes
+      - name: Check if there are changes
         run: |
-          git config --global user.name 'GrahLnn'
-          git config --global user.email 'grahlnn@skiff.com'
-          git add best_ips.txt
-          git commit -m 'Update IPs'
-          git push
+          if ! git diff --exit-code; then
+            git config --global user.name 'GrahLnn'
+            git config --global user.email 'grahlnn@skiff.com'
+            git add best_ips.txt
+            git commit -m 'Update IPs'
+            git push
+          else
+            echo "No changes to commit"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
