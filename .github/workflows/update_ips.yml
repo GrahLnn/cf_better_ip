@@ -2,7 +2,7 @@ name: Update IPs
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # 每五分钟运行一次
+    - cron: '*/50 * * * *'
   push:
     branches:
       - main
