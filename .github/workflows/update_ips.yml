@@ -1,0 +1,36 @@
+name: Update IPs
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # 每五分钟运行一次
+  push:
+    branches:
+      - main
+
+jobs:
+  update_ips:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run update_ips.py
+        run: python update_ips.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'GrahLnn'
+          git config --global user.email 'grahlnn@skiff.com'
+          git add best_ips.txt
+          git commit -m 'Update IPs'
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
