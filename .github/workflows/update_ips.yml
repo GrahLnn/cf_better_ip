@@ -2,7 +2,7 @@ name: Update IPs
 
 on:
   schedule:
-    - cron: '*/50 * * * *'
+    - cron: '*/5 * * * *'
   push:
     branches:
       - main
