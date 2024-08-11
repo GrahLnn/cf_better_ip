@@ -23,5 +23,5 @@ if __name__ == "__main__":
         git_commit_and_push()
         
         # 等待24小时（86400秒）
-        time.sleep(86400)
+        time.sleep(3600)
 

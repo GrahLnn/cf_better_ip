@@ -1,5 +1,6 @@
 import subprocess
 import os
+import requests
 
 def run_cloudflarest():
     try:
@@ -10,6 +11,11 @@ def run_cloudflarest():
         result = subprocess.run(["./CloudflareST"], check=True, capture_output=True, text=True)
         print("CloudflareST 输出:")
         print(result.stdout)
+
+        response = requests.get('https://ip.164746.xyz/ipTop.html')
+        response.raise_for_status()
+        data = response.text.strip()
+        ips = data.split(',')
         
         # 读取 result.csv 文件
         if os.path.exists("result.csv"):
@@ -17,7 +23,6 @@ def run_cloudflarest():
                 lines = file.readlines()
 
             # 去掉第一行标题，处理剩余行
-            ips = []
             for index, line in enumerate(lines[1:], start=1):  # 从第二行开始，index从1开始
                 ip = line.split(",")[0]
                 ips.append(f"{ip} #{index}")
