@@ -25,7 +25,7 @@ def run_cloudflarest():
             # 去掉第一行标题，处理剩余行
             for index, line in enumerate(lines[1:], start=1):  # 从第二行开始，index从1开始
                 ip = line.split(",")[0]
-                ips.append(f"{ip} #{index}")
+                ips.append(f"{ip}") 
 
             # 将结果写入到父文件夹的 best_ips.txt
             with open("../best_ips.txt", "w") as output_file:
