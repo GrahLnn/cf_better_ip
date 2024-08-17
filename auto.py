@@ -19,9 +19,12 @@ def git_commit_and_push():
 
 if __name__ == "__main__":
     while True:
-        run_ta_script()
-        git_commit_and_push()
+        try:
+            run_ta_script()
+            git_commit_and_push()
         
-        # 等待24小时（86400秒）
-        time.sleep(3600)
+            # 等待24小时（86400秒）
+            time.sleep(1800)
+        except:
+            contimue
 
